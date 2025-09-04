@@ -1,0 +1,62 @@
+# Prometheus Configuration File for Docker Environment
+# Global configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'fastapi-monitor'
+
+# Rule files
+rule_files:
+  # - "rules/*.yml"
+
+# Scrape configuration
+scrape_configs:
+  # FastAPI application metrics
+  - job_name: 'fastapi-app'
+    static_configs:
+      - targets: ['fastapi_app:8000']
+    metrics_path: /metrics
+    scrape_interval: 5s
+    scrape_timeout: 5s
+
+  # Metrics proxy server (if running)
+  - job_name: 'metrics-proxy'
+    static_configs:
+      - targets: ['metrics_proxy:9090']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Prometheus server itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    scrape_timeout: 5s
+
+  # Redis metrics (if redis-exporter is added)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+  #   scrape_interval: 15s
+
+  # PostgreSQL metrics (if postgres-exporter is added)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+  #   scrape_interval: 15s
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus
+    retention.time: 168h  # 7 days
+    retention.size: 10GB
+
+# Alerting configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
