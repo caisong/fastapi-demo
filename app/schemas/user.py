@@ -4,7 +4,7 @@ User schemas (Pydantic models)
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 # Shared properties
@@ -22,6 +22,20 @@ class UserCreate(UserBase):
     """Schema for creating a user"""
     email: EmailStr
     password: str
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        """Validate password strength"""
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.islower() for c in v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one digit')
+        return v
 
 
 # Properties to receive via API on update

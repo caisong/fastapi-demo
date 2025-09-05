@@ -53,7 +53,9 @@ if settings.ALLOWED_HOSTS:
     )
 
 # Add custom middleware
-add_middleware(app)
+# Set enable_auth_middleware=True to use middleware-based authentication
+# instead of Depends (Depends is recommended for most use cases)
+add_middleware(app, enable_auth_middleware=False)
 
 # Setup Prometheus metrics
 instrumentator = Instrumentator(

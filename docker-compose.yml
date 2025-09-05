@@ -134,6 +134,23 @@ services:
     profiles:
       - metrics
 
+  # Pushgateway (Optional)
+  pushgateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME:-fastapi}_pushgateway
+    restart: unless-stopped
+    command: ["python", "scripts/start_pushgateway.py"]
+    environment:
+      PUSHGATEWAY_PORT: 9091
+    ports:
+      - "${PUSHGATEWAY_EXTERNAL_PORT:-9091}:9091"
+    networks:
+      - app_network
+    profiles:
+      - metrics
+
   # Grafana (Optional)
   grafana:
     image: grafana/grafana:latest

@@ -1,5 +1,5 @@
-# Development Procfile with Redis and monitoring
-# Usage: honcho start -f Procfile.dev
+# Monitoring services Procfile
+# Usage: honcho start -f Procfile.monitoring
 
 # Main FastAPI application server
 web: python scripts/dev.py
@@ -16,5 +16,5 @@ pushgateway: python scripts/start_pushgateway.py
 # Local Redis server
 redis: redis-server --port 6379 --loglevel warning
 
-# Optional: Redis CLI monitor (uncomment to enable)
-# monitor: redis-cli monitor
+# Optional: Redis CLI monitor
+monitor: redis-cli monitor

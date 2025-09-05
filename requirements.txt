@@ -2,6 +2,9 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
+# Process Management
+honcho==1.0.1
+
 # Admin Interface
 sqladmin==0.21.0
 

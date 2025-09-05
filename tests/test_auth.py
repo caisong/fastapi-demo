@@ -18,7 +18,7 @@ class TestUserRegistration:
         """Test successful user registration"""
         user_data = {
             "email": "newuser@example.com",
-            "password": "newpassword123",
+            "password": "NewPassword123",
             "first_name": "New",
             "last_name": "User"
         }
@@ -45,7 +45,7 @@ class TestUserRegistration:
         
         user_data = {
             "email": "existing@example.com",
-            "password": "newpassword123",
+            "password": "NewPassword123",
             "first_name": "New",
             "last_name": "User"
         }
@@ -220,7 +220,7 @@ class TestCurrentUser:
         
         # Get current user
         headers = {"Authorization": f"Bearer {access_token}"}
-        response = client.get("/api/v1/auth/me", headers=headers)
+        response = client.get("/api/v1/users/me", headers=headers)
         
         assert response.status_code == 200
         user_data = response.json()
@@ -229,14 +229,14 @@ class TestCurrentUser:
     
     def test_get_current_user_no_token(self, client: TestClient):
         """Test getting current user without token"""
-        response = client.get("/api/v1/auth/me")
+        response = client.get("/api/v1/users/me")
         assert response.status_code == 401
     
     def test_get_current_user_invalid_token(self, client: TestClient):
         """Test getting current user with invalid token"""
         headers = {"Authorization": "Bearer invalid-token"}
-        response = client.get("/api/v1/auth/me", headers=headers)
-        assert response.status_code == 403
+        response = client.get("/api/v1/users/me", headers=headers)
+        assert response.status_code == 401
 
 
 class TestAuthenticationSecurity:

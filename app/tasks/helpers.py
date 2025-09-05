@@ -29,6 +29,8 @@ from app.tasks import (
     cleanup_old_data_task,
     generate_report_task,
     send_batch_notifications_task,
+    collect_third_party_metrics_task,
+    collect_specific_api_task,
 )
 
 # Make tasks enqueueable
@@ -38,3 +40,5 @@ process_item_task = async_task(process_item_task)
 cleanup_old_data_task = async_task(cleanup_old_data_task)
 generate_report_task = async_task(generate_report_task)
 send_batch_notifications_task = async_task(send_batch_notifications_task)
+collect_third_party_metrics_task = async_task(collect_third_party_metrics_task)
+collect_specific_api_task = async_task(collect_specific_api_task)

@@ -4,7 +4,8 @@ Item endpoints
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.api import deps
 from app.db.crud import CRUDBase
@@ -20,8 +21,8 @@ item_crud = CRUDBase[Item, ItemCreate, ItemUpdate](Item)
 
 
 @router.get("/", response_model=List[ItemSchema])
-def read_items(
-    db: Session = Depends(get_db),
+async def read_items(
+    db: AsyncSession = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(deps.get_current_active_user),
@@ -30,36 +31,37 @@ def read_items(
     Retrieve items
     """
     if current_user.is_superuser:
-        items = item_crud.get_multi(db, skip=skip, limit=limit)
+        items = await item_crud.get_multi(db, skip=skip, limit=limit)
     else:
         # Regular users can only see their own items
-        items = db.query(Item).filter(Item.owner_id == current_user.id).offset(skip).limit(limit).all()
+        result = await db.execute(select(Item).filter(Item.owner_id == current_user.id).offset(skip).limit(limit))
+        items = result.scalars().all()
     return items
 
 
 @router.post("/", response_model=ItemSchema)
-def create_item(
+async def create_item(
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     item_in: ItemCreate,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Create new item
     """
-    item_data = item_in.dict()
+    item_data = item_in.model_dump()
     item_data["owner_id"] = current_user.id
     item = Item(**item_data)
     db.add(item)
-    db.commit()
-    db.refresh(item)
+    await db.commit()
+    await db.refresh(item)
     return item
 
 
 @router.put("/{id}", response_model=ItemSchema)
-def update_item(
+async def update_item(
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     id: int,
     item_in: ItemUpdate,
     current_user: User = Depends(deps.get_current_active_user),
@@ -67,26 +69,26 @@ def update_item(
     """
     Update an item
     """
-    item = item_crud.get(db=db, id=id)
+    item = await item_crud.get(db=db, id=id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     if not current_user.is_superuser and (item.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
-    item = item_crud.update(db=db, db_obj=item, obj_in=item_in)
+    item = await item_crud.update(db=db, db_obj=item, obj_in=item_in)
     return item
 
 
 @router.get("/{id}", response_model=ItemSchema)
-def read_item(
+async def read_item(
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     id: int,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Get item by ID
     """
-    item = item_crud.get(db=db, id=id)
+    item = await item_crud.get(db=db, id=id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     if not current_user.is_superuser and (item.owner_id != current_user.id):
@@ -95,19 +97,19 @@ def read_item(
 
 
 @router.delete("/{id}", response_model=ItemSchema)
-def delete_item(
+async def delete_item(
     *,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     id: int,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
     Delete an item
     """
-    item = item_crud.get(db=db, id=id)
+    item = await item_crud.get(db=db, id=id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     if not current_user.is_superuser and (item.owner_id != current_user.id):
         raise HTTPException(status_code=400, detail="Not enough permissions")
-    item = item_crud.remove(db=db, id=id)
+    item = await item_crud.remove(db=db, id=id)
     return item

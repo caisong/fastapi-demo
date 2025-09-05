@@ -28,6 +28,14 @@ scrape_configs:
     scrape_interval: 10s
     scrape_timeout: 5s
 
+  # Pushgateway (if running)
+  - job_name: 'pushgateway'
+    static_configs:
+      - targets: ['pushgateway:9091']
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
   # Prometheus server itself
   - job_name: 'prometheus'
     static_configs:

@@ -129,6 +129,12 @@ async def send_batch_notifications_task(ctx: Dict[str, Any], user_emails: list, 
     return f"Batch notifications sent successfully to {len(user_emails)} users"
 
 
+# Import third party collector tasks
+from app.tasks.third_party_collector import (
+    collect_third_party_metrics_task,
+    collect_specific_api_task
+)
+
 # Task registry for ARQ worker
 TASK_FUNCTIONS = [
     send_welcome_email_task,
@@ -137,4 +143,6 @@ TASK_FUNCTIONS = [
     cleanup_old_data_task,
     generate_report_task,
     send_batch_notifications_task,
+    collect_third_party_metrics_task,
+    collect_specific_api_task,
 ]

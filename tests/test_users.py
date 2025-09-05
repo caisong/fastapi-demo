@@ -205,7 +205,9 @@ class TestUserDetailEndpoint:
         create_superuser(db, email="admin@example.com")
         
         headers = get_superuser_token_headers(client)
-        response = client.get("/api/v1/users/99999", headers=headers)\n        \n        assert response.status_code == 404
+        response = client.get("/api/v1/users/99999", headers=headers)
+        
+        assert response.status_code == 404
 
 
 class TestUserUpdateEndpoint:
