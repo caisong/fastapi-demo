@@ -7,21 +7,14 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from app.api.v1.api import api_router
 from app.core.config import settings
+from app.core.application import create_app, run_app
 from app.core.middleware import add_middleware
 from app.admin.admin import setup_admin
 from app.core.task_queue import task_queue
 
-# Create FastAPI instance
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description=settings.PROJECT_DESCRIPTION,
-    version=settings.PROJECT_VERSION,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json" if settings.ENVIRONMENT != "production" else None,
-    docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
-    redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
-)
+# Create FastAPI app using the application factory
+app = create_app()
 
 # Add session middleware for admin authentication
 app.add_middleware(
@@ -34,23 +27,27 @@ app.add_middleware(
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-# Add trusted host middleware
-if settings.ALLOWED_HOSTS:
+# Add trusted host middleware - this needs to be added after create_app()
+# but before other middlewares to ensure proper order
+if settings.ALLOWED_HOSTS and settings.ENVIRONMENT != "testing":
     allowed_hosts = settings.ALLOWED_HOSTS.copy()
-    # Add testserver for testing
-    if settings.ENVIRONMENT == "testing":
-        allowed_hosts.extend(["testserver", "*"])
+    
+    # Remove any existing TrustedHostMiddleware first
+    app.user_middleware = [m for m in app.user_middleware if m.cls != TrustedHostMiddleware]
     
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=allowed_hosts,
     )
+elif settings.ENVIRONMENT == "testing":
+    # In testing environment, remove TrustedHostMiddleware completely
+    app.user_middleware = [m for m in app.user_middleware if m.cls != TrustedHostMiddleware]
 
 # Add custom middleware
 # Set enable_auth_middleware=True to use middleware-based authentication
@@ -58,23 +55,21 @@ if settings.ALLOWED_HOSTS:
 add_middleware(app, enable_auth_middleware=False)
 
 # Setup Prometheus metrics
-instrumentator = Instrumentator(
-    should_group_status_codes=False,
-    should_ignore_untemplated=True,
-    should_respect_env_var=True,
-    should_instrument_requests_inprogress=True,
-    excluded_handlers=["/metrics"],  # Don't monitor the metrics endpoint itself
-    env_var_name="ENABLE_METRICS",
-    inprogress_name="inprogress",
-    inprogress_labels=True,
-)
-instrumentator.instrument(app).expose(app)
+if settings.ENABLE_METRICS:
+    instrumentator = Instrumentator(
+        should_group_status_codes=False,
+        should_ignore_untemplated=True,
+        should_respect_env_var=True,
+        should_instrument_requests_inprogress=True,
+        excluded_handlers=["/metrics"],  # Don't monitor the metrics endpoint itself
+        env_var_name="ENABLE_METRICS",
+        inprogress_name="inprogress",
+        inprogress_labels=True,
+    )
+    instrumentator.instrument(app).expose(app)
 
 # Setup admin interface
 setup_admin(app)
-
-# Include API routes
-app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 @app.on_event("startup")
@@ -89,29 +84,6 @@ async def shutdown_event():
     await task_queue.shutdown()
 
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": f"Welcome to {settings.PROJECT_NAME}",
-        "version": settings.PROJECT_VERSION,
-        "status": "running",
-    }
-
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": settings.PROJECT_NAME}
-
-
 if __name__ == "__main__":
-    import uvicorn
-    
-    uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.ENVIRONMENT == "development",
-        log_level=settings.LOG_LEVEL.lower(),
-    )
+    # Run the application
+    run_app()

@@ -211,120 +211,120 @@ class TestUserDetailEndpoint:
 
 
 class TestUserUpdateEndpoint:
-    \"\"\"Test user update endpoint\"\"\"
+    """Test user update endpoint"""
     
     def test_update_user_as_superuser_success(self, client: TestClient, db: Session):
-        \"\"\"Test successful user update by superuser\"\"\"
-        create_superuser(db, email=\"admin@example.com\")
-        target_user = create_user(db, email=\"user@example.com\")
+        """Test successful user update by superuser"""
+        create_superuser(db, email="admin@example.com")
+        target_user = create_user(db, email="user@example.com")
         
         update_data = {
-            \"first_name\": \"Updated\",
-            \"last_name\": \"Name\",
-            \"is_active\": False
+            "first_name": "Updated",
+            "last_name": "Name",
+            "is_active": False
         }
         
         headers = get_superuser_token_headers(client)
-        response = client.put(f\"/api/v1/users/{target_user.id}\", json=update_data, headers=headers)
+        response = client.put(f"/api/v1/users/{target_user.id}", json=update_data, headers=headers)
         
         assert response.status_code == 200
         updated_user = response.json()
-        assert updated_user[\"first_name\"] == update_data[\"first_name\"]
-        assert updated_user[\"last_name\"] == update_data[\"last_name\"]
-        assert updated_user[\"is_active\"] == update_data[\"is_active\"]
+        assert updated_user["first_name"] == update_data["first_name"]
+        assert updated_user["last_name"] == update_data["last_name"]
+        assert updated_user["is_active"] == update_data["is_active"]
     
     def test_update_user_password(self, client: TestClient, db: Session):
-        \"\"\"Test updating user password\"\"\"
-        create_superuser(db, email=\"admin@example.com\")
-        target_user = create_user(db, email=\"user@example.com\")
+        """Test updating user password"""
+        create_superuser(db, email="admin@example.com")
+        target_user = create_user(db, email="user@example.com")
         
         update_data = {
-            \"password\": \"newpassword123\"
+            "password": "newpassword123"
         }
         
         headers = get_superuser_token_headers(client)
-        response = client.put(f\"/api/v1/users/{target_user.id}\", json=update_data, headers=headers)
+        response = client.put(f"/api/v1/users/{target_user.id}", json=update_data, headers=headers)
         
         assert response.status_code == 200
         # Password should not be in response
         updated_user = response.json()
-        assert \"password\" not in updated_user
-        assert \"hashed_password\" not in updated_user
+        assert "password" not in updated_user
+        assert "hashed_password" not in updated_user
     
     def test_update_user_as_regular_user_fails(self, client: TestClient, db: Session):
-        \"\"\"Test that regular users cannot update users\"\"\"
-        create_user(db, email=\"user1@example.com\")
-        target_user = create_user(db, email=\"user2@example.com\")
+        """Test that regular users cannot update users"""
+        create_user(db, email="user1@example.com")
+        target_user = create_user(db, email="user2@example.com")
         
-        update_data = {\"first_name\": \"Updated\"}
+        update_data = {"first_name": "Updated"}
         
-        headers = get_user_token_headers(client, email=\"user1@example.com\")
-        response = client.put(f\"/api/v1/users/{target_user.id}\", json=update_data, headers=headers)
+        headers = get_user_token_headers(client, email="user1@example.com")
+        response = client.put(f"/api/v1/users/{target_user.id}", json=update_data, headers=headers)
         
         assert response.status_code == 400
-        assert \"not enough privileges\" in response.json()[\"detail\"]
+        assert "not enough privileges" in response.json()["detail"]
     
     def test_update_nonexistent_user_fails(self, client: TestClient, db: Session):
-        \"\"\"Test updating nonexistent user returns 404\"\"\"
-        create_superuser(db, email=\"admin@example.com\")
+        """Test updating nonexistent user returns 404"""
+        create_superuser(db, email="admin@example.com")
         
-        update_data = {\"first_name\": \"Updated\"}
+        update_data = {"first_name": "Updated"}
         
         headers = get_superuser_token_headers(client)
-        response = client.put(\"/api/v1/users/99999\", json=update_data, headers=headers)
+        response = client.put("/api/v1/users/99999", json=update_data, headers=headers)
         
         assert response.status_code == 404
-        assert \"does not exist\" in response.json()[\"detail\"]
+        assert "does not exist" in response.json()["detail"]
 
 
 class TestUserPermissions:
-    \"\"\"Test user permission edge cases\"\"\"
+    """Test user permission edge cases"""
     
     def test_superuser_can_access_all_endpoints(self, client: TestClient, db: Session):
-        \"\"\"Test that superuser has access to all user endpoints\"\"\"
-        superuser = create_superuser(db, email=\"admin@example.com\")
-        regular_user = create_user(db, email=\"user@example.com\")
+        """Test that superuser has access to all user endpoints"""
+        superuser = create_superuser(db, email="admin@example.com")
+        regular_user = create_user(db, email="user@example.com")
         
         headers = get_superuser_token_headers(client)
         
         # Can list users
-        response = client.get(\"/api/v1/users/\", headers=headers)
+        response = client.get("/api/v1/users/", headers=headers)
         assert response.status_code == 200
         
         # Can create users  
         user_data = {
-            \"email\": \"newuser@example.com\",
-            \"password\": \"newpassword123\",
-            \"first_name\": \"New\",
-            \"last_name\": \"User\"
+            "email": "newuser@example.com",
+            "password": "newpassword123",
+            "first_name": "New",
+            "last_name": "User"
         }
-        response = client.post(\"/api/v1/users/\", json=user_data, headers=headers)
+        response = client.post("/api/v1/users/", json=user_data, headers=headers)
         assert response.status_code == 200
         
         # Can view any user
-        response = client.get(f\"/api/v1/users/{regular_user.id}\", headers=headers)
+        response = client.get(f"/api/v1/users/{regular_user.id}", headers=headers)
         assert response.status_code == 200
         
         # Can update any user
-        update_data = {\"first_name\": \"Updated\"}
-        response = client.put(f\"/api/v1/users/{regular_user.id}\", json=update_data, headers=headers)
+        update_data = {"first_name": "Updated"}
+        response = client.put(f"/api/v1/users/{regular_user.id}", json=update_data, headers=headers)
         assert response.status_code == 200
     
     @patch('app.core.security.get_password_hash')
     def test_password_hashing_called_on_create(self, mock_hash, client: TestClient, db: Session):
-        \"\"\"Test that password is properly hashed when creating user\"\"\"
-        create_superuser(db, email=\"admin@example.com\")
-        mock_hash.return_value = \"hashed_password\"
+        """Test that password is properly hashed when creating user"""
+        create_superuser(db, email="admin@example.com")
+        mock_hash.return_value = "hashed_password"
         
         user_data = {
-            \"email\": \"newuser@example.com\",
-            \"password\": \"plaintext_password\",
-            \"first_name\": \"New\",
-            \"last_name\": \"User\"
+            "email": "newuser@example.com",
+            "password": "plaintext_password",
+            "first_name": "New",
+            "last_name": "User"
         }
         
         headers = get_superuser_token_headers(client)
-        response = client.post(\"/api/v1/users/\", json=user_data, headers=headers)
+        response = client.post("/api/v1/users/", json=user_data, headers=headers)
         
         assert response.status_code == 200
-        mock_hash.assert_called_once_with(\"plaintext_password\")"
+        mock_hash.assert_called_once_with("plaintext_password")

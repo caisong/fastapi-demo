@@ -11,6 +11,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 os.environ["ENVIRONMENT"] = "testing"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
 os.environ["ENABLE_METRICS"] = "false"
+os.environ["ENABLE_SECURITY_HEADERS"] = "false"
+os.environ["ASYNC_DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
 
 from fastapi.testclient import TestClient
 from httpx import AsyncClient

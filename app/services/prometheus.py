@@ -32,7 +32,7 @@ class PrometheusService:
             )
         return self._client
     
-    async def health_check(self) -> Dict[str, Any]:iax
+    async def health_check(self) -> Dict[str, Any]:
         """Check if Prometheus server is healthy"""
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
