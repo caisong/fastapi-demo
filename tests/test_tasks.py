@@ -188,11 +188,13 @@ class TestJobStatusEndpoint:
         create_user(db, email="user@example.com")
         
         # Configure mock to return specific status
-        mock_task_queue.get_job_status.return_value = {
-            "status": "completed",
-            "job_id": "test-job-123",
-            "result": "Report generated successfully"
-        }
+        def mock_status_func(job_id):
+            return {
+                "status": "completed",
+                "job_id": job_id,
+                "result": "Report generated successfully"
+            }
+        mock_task_queue._mock_get_status.side_effect = mock_status_func
         
         headers = get_user_token_headers(client, email="user@example.com")
         response = client.get("/api/v1/tasks/jobs/test-job-123/status", headers=headers)
@@ -208,7 +210,9 @@ class TestJobStatusEndpoint:
         create_user(db, email="user@example.com")
         
         # Configure mock to return not found
-        mock_task_queue.get_job_status.return_value = {"status": "not_found"}
+        def mock_status_func(job_id):
+            return {"status": "not_found"}
+        mock_task_queue._mock_get_status.side_effect = mock_status_func
         
         headers = get_user_token_headers(client, email="user@example.com")
         response = client.get("/api/v1/tasks/jobs/nonexistent-job/status", headers=headers)
@@ -228,11 +232,13 @@ class TestJobStatusEndpoint:
         """Test job status endpoint with various job states"""
         create_user(db, email="user@example.com")
         
-        mock_task_queue.get_job_status.return_value = {
-            "status": job_status,
-            "job_id": "test-job",
-            "result": f"Job is {job_status}"
-        }
+        def mock_status_func(job_id):
+            return {
+                "status": job_status,
+                "job_id": job_id,
+                "result": f"Job is {job_status}"
+            }
+        mock_task_queue._mock_get_status.side_effect = mock_status_func
         
         headers = get_user_token_headers(client, email="user@example.com")
         response = client.get("/api/v1/tasks/jobs/test-job/status", headers=headers)
@@ -343,11 +349,13 @@ class TestTaskIntegration:
         create_user(db, email="user@example.com")
         
         # Configure mock to simulate task failure
-        mock_task_queue.get_job_status.return_value = {
-            "status": "failed",
-            "job_id": "failed-job",
-            "error": "Task processing failed"
-        }
+        def mock_status_func(job_id):
+            return {
+                "status": "failed",
+                "job_id": job_id,
+                "error": "Task processing failed"
+            }
+        mock_task_queue._mock_get_status.side_effect = mock_status_func
         
         headers = get_user_token_headers(client, email="user@example.com")
         response = client.get("/api/v1/tasks/jobs/failed-job/status", headers=headers)

@@ -139,18 +139,25 @@ def mock_task_queue(mocker):
     def mock_enqueue_task(function_name, *args, **kwargs):
         return f"mock-job-{function_name}"
     
+    mock_queue.enqueue_task.side_effect = mock_enqueue_task
+    
+    # Patch the task_queue methods
+    mock_enqueue = mocker.patch.object(task_queue, "enqueue_task", side_effect=mock_enqueue_task)
+    
+    # For get_job_status, create a dynamic side_effect that returns the correct job_id
     def mock_get_job_status(job_id):
         return {
             "status": "completed",
-            "job_id": job_id,  # Use the actual job_id passed in
+            "job_id": job_id,  # Return the actual job_id that was passed in
             "result": "mock-result"
         }
     
-    mock_queue.enqueue_task.side_effect = mock_enqueue_task
-    mock_queue.get_job_status.side_effect = mock_get_job_status
+    mock_get_status = mocker.patch.object(task_queue, "get_job_status", side_effect=mock_get_job_status)
     
-    mocker.patch.object(task_queue, "enqueue_task", side_effect=mock_enqueue_task)
-    mocker.patch.object(task_queue, "get_job_status", side_effect=mock_get_job_status)
+    # Store references on the mock object for tests to access and override
+    mock_queue._mock_enqueue = mock_enqueue
+    mock_queue._mock_get_status = mock_get_status
+    
     return mock_queue
 
 
