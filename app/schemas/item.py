@@ -4,7 +4,7 @@ Item schemas (Pydantic models)
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 # Shared properties
@@ -18,6 +18,24 @@ class ItemBase(BaseModel):
 class ItemCreate(ItemBase):
     """Schema for creating an item"""
     title: str
+    
+    @field_validator('title')
+    @classmethod
+    def validate_title(cls, v):
+        """Validate title is not empty"""
+        if not v or not v.strip():
+            raise ValueError('Title cannot be empty')
+        if len(v) > 100:
+            raise ValueError('Title cannot exceed 100 characters')
+        return v.strip()
+    
+    @field_validator('description')
+    @classmethod
+    def validate_description(cls, v):
+        """Validate description length"""
+        if v and len(v) > 1000:
+            raise ValueError('Description cannot exceed 1000 characters')
+        return v
 
 
 # Properties to receive on item update

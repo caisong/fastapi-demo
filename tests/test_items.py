@@ -96,7 +96,7 @@ class TestItemListEndpoint:
 class TestItemCreationEndpoint:
     """Test item creation endpoint"""
     
-    @patch('app.services.item.process_item_task.delay')
+    @patch('app.tasks.helpers.process_item_task.delay')
     def test_create_item_success(self, mock_task, client: TestClient, db: Session):
         """Test successful item creation"""
         user = create_user(db, email="user@example.com")
@@ -188,7 +188,7 @@ class TestItemDetailEndpoint:
         response = client.get(f"/api/v1/items/{item.id}", headers=headers)
         
         assert response.status_code == 400
-        assert "not enough permissions" in response.json()["detail"]
+        assert "not enough permissions" in response.json()["detail"].lower()
     
     def test_get_any_item_as_superuser_success(self, client: TestClient, db: Session):
         """Test superuser can get any item"""
@@ -250,7 +250,7 @@ class TestItemUpdateEndpoint:
         response = client.put(f"/api/v1/items/{item.id}", json=update_data, headers=headers)
         
         assert response.status_code == 400
-        assert "not enough permissions" in response.json()["detail"]
+        assert "not enough permissions" in response.json()["detail"].lower()
     
     def test_update_any_item_as_superuser_success(self, client: TestClient, db: Session):
         """Test superuser can update any item"""

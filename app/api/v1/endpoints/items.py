@@ -55,6 +55,15 @@ async def create_item(
     db.add(item)
     await db.commit()
     await db.refresh(item)
+    
+    # Trigger background task for item processing
+    try:
+        from app.tasks.helpers import process_item_task
+        await process_item_task.delay(item.id)
+    except ImportError:
+        # Task system not available, skip tasks
+        pass
+    
     return item
 
 

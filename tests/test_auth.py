@@ -23,7 +23,7 @@ class TestUserRegistration:
             "last_name": "User"
         }
         
-        with patch('app.services.user.send_welcome_email_task.delay') as mock_email:
+        with patch('app.tasks.helpers.send_welcome_email_task.delay') as mock_email:
             mock_email.return_value = "mock-job-id"
             response = client.post("/api/v1/auth/register", json=user_data)
         
@@ -58,7 +58,7 @@ class TestUserRegistration:
         """Test registration with invalid email fails"""
         user_data = {
             "email": "invalid-email",
-            "password": "newpassword123",
+            "password": "NewPassword123",  # Valid strong password
             "first_name": "New",
             "last_name": "User"
         }
@@ -88,7 +88,7 @@ class TestUserLogin:
         
         login_data = {
             "username": "test@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         response = client.post("/api/v1/auth/login", data=login_data)
@@ -105,7 +105,7 @@ class TestUserLogin:
         
         login_data = {
             "email": "test@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         response = client.post("/api/v1/auth/login-json", json=login_data)
@@ -121,7 +121,7 @@ class TestUserLogin:
         """Test login with incorrect email"""
         login_data = {
             "username": "wrong@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         response = client.post("/api/v1/auth/login", data=login_data)
@@ -147,7 +147,7 @@ class TestUserLogin:
         
         login_data = {
             "username": "test@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         response = client.post("/api/v1/auth/login", data=login_data)
@@ -165,7 +165,7 @@ class TestTokenRefresh:
         # First login to get tokens
         login_data = {
             "username": "test@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         login_response = client.post("/api/v1/auth/login", data=login_data)
@@ -211,7 +211,7 @@ class TestCurrentUser:
         # Login to get token
         login_data = {
             "username": "test@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         login_response = client.post("/api/v1/auth/login", data=login_data)
@@ -250,7 +250,7 @@ class TestAuthenticationSecurity:
         
         login_data = {
             "username": "test@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         client.post("/api/v1/auth/login", data=login_data)
@@ -262,7 +262,7 @@ class TestAuthenticationSecurity:
         
         login_data = {
             "username": "test@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         response = client.post("/api/v1/auth/login", data=login_data)

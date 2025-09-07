@@ -4,6 +4,7 @@ Task management endpoints
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 from app.api import deps
 from app.db.database import get_db
@@ -17,6 +18,15 @@ from app.tasks.helpers import (
 )
 
 router = APIRouter()
+
+
+class ReportRequest(BaseModel):
+    report_type: str
+    
+
+class NotificationRequest(BaseModel):
+    message: str
+    user_emails: List[str]
 
 
 @router.post("/reports/generate")
@@ -44,29 +54,35 @@ async def generate_report(
 
 @router.post("/notifications/batch")
 async def send_batch_notifications(
-    message: str,
-    user_emails: List[str],
+    request: NotificationRequest,
     current_user: User = Depends(deps.get_current_active_superuser)
 ) -> Any:
     """
     Send batch notifications (admin only)
     """
-    if len(user_emails) > 100:
+    if len(request.user_emails) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Email list cannot be empty"
+        )
+    
+    if len(request.user_emails) > 100:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot send to more than 100 users at once"
         )
     
-    job_id = await send_batch_notifications_task.delay(user_emails, message)
+    job_id = await send_batch_notifications_task.delay(request.user_emails, request.message)
     
     return {
-        "message": f"Batch notification started for {len(user_emails)} users",
+        "message": f"Batch notification started for {len(request.user_emails)} users",
         "job_id": job_id,
+        "recipient_count": len(request.user_emails),
         "status": "queued"
     }
 
 
-@router.post("/maintenance/cleanup")
+@router.post("/cleanup")
 async def trigger_cleanup(
     current_user: User = Depends(deps.get_current_active_superuser)
 ) -> Any:

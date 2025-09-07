@@ -13,7 +13,12 @@ from app.admin.auth import AdminAuthBackend
 def create_sync_engine():
     """Create synchronous engine for admin interface"""
     # Convert async URL to sync URL for SQLAdmin
-    sync_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+    if settings.ENVIRONMENT == "testing" or "sqlite" in settings.DATABASE_URL:
+        # Use SQLite for testing
+        sync_url = settings.DATABASE_URL.replace("+aiosqlite", "")
+    else:
+        # Use PostgreSQL for production
+        sync_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
     return create_engine(sync_url)
 
 

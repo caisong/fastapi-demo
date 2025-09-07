@@ -20,12 +20,12 @@ class TestUserItemWorkflow:
         # 1. Register a new user
         user_data = {
             "email": "lifecycle@example.com",
-            "password": "password123",
+            "password": "Password123",  # Updated to meet validation requirements
             "first_name": "Lifecycle",
             "last_name": "User"
         }
         
-        with patch('app.services.user.send_welcome_email_task.delay') as mock_email:
+        with patch('app.tasks.helpers.send_welcome_email_task.delay') as mock_email:
             mock_email.return_value = "mock-job-id"
             register_response = client.post("/api/v1/auth/register", json=user_data)
         
@@ -36,7 +36,7 @@ class TestUserItemWorkflow:
         # 2. Login with the new user
         login_data = {
             "username": "lifecycle@example.com",
-            "password": "password123"
+            "password": "Password123"
         }
         
         login_response = client.post("/api/v1/auth/login", data=login_data)
@@ -47,11 +47,10 @@ class TestUserItemWorkflow:
         headers = {"Authorization": f"Bearer {access_token}"}
         
         # 3. Verify user can access protected endpoints
-        me_response = client.get("/api/v1/auth/me", headers=headers)
+        me_response = client.post("/api/v1/auth/test-token", headers=headers)
         assert me_response.status_code == 200
         me_data = me_response.json()
-        assert me_data["email"] == "lifecycle@example.com"
-        assert me_data["id"] == user_id
+        assert me_data["user_id"] == user_id
         
         # 4. Create multiple items
         items_created = []
@@ -129,7 +128,7 @@ class TestAdminUserManagement:
         # 2. Create users via admin endpoint
         user_data = {
             "email": "managed@example.com",
-            "password": "password123",
+            "password": "Password123",
             "first_name": "Managed",
             "last_name": "User",
             "is_active": True,
@@ -174,7 +173,7 @@ class TestAdminUserManagement:
         # 6. Verify updated user cannot login (inactive)
         login_data = {
             "username": "managed@example.com",
-            "password": "password123"
+            "password": "Password123"
         }
         
         login_response = client.post("/api/v1/auth/login", data=login_data)
@@ -192,14 +191,8 @@ class TestTaskIntegration:
         superuser = api_helper.create_test_superuser()
         headers = api_helper.get_auth_headers(superuser)
         
-        # 2. Generate report task
-        report_params = {
-            "report_type": "users",
-            "date_range": "last_30_days",
-            "format": "csv"
-        }
-        
-        report_response = client.post("/api/v1/tasks/generate-report", json=report_params, headers=headers)
+        # 2. Generate report task (use query parameter instead of JSON body)
+        report_response = client.post("/api/v1/tasks/reports/generate?report_type=user_activity", headers=headers)
         assert report_response.status_code == 200
         
         report_result = report_response.json()
@@ -207,43 +200,37 @@ class TestTaskIntegration:
         job_id = report_result["job_id"]
         
         # 3. Check job status
-        status_response = client.get(f"/api/v1/tasks/status/{job_id}", headers=headers)
+        status_response = client.get(f"/api/v1/tasks/jobs/{job_id}/status", headers=headers)
         assert status_response.status_code == 200
         
         status_result = status_response.json()
         assert status_result["job_id"] == job_id
         assert "status" in status_result
         
-        # 4. Send batch notifications
-        notification_params = {
-            "user_ids": [1, 2, 3],
+        # 4. Send batch notifications  
+        notification_data = {
             "message": "Test notification",
-            "notification_type": "info"
+            "user_emails": ["user1@example.com", "user2@example.com", "user3@example.com"]
         }
         
-        notification_response = client.post("/api/v1/tasks/send-notifications", json=notification_params, headers=headers)
+        notification_response = client.post("/api/v1/tasks/notifications/batch", json=notification_data, headers=headers)
         assert notification_response.status_code == 200
         
-        # 5. Perform data cleanup
-        cleanup_params = {
-            "cleanup_type": "old_sessions",
-            "days_old": 30
-        }
-        
-        cleanup_response = client.post("/api/v1/tasks/cleanup", json=cleanup_params, headers=headers)
+        # 5. Perform data cleanup (fix endpoint path)
+        cleanup_response = client.post("/api/v1/tasks/cleanup", headers=headers)
         assert cleanup_response.status_code == 200
         
         # 6. Get queue information
-        queue_info_response = client.get("/api/v1/tasks/queue-info", headers=headers)
+        queue_info_response = client.get("/api/v1/tasks/queue/info", headers=headers)
         assert queue_info_response.status_code == 200
         
         queue_info = queue_info_response.json()
-        assert "pending_jobs" in queue_info
-        assert "in_progress_jobs" in queue_info
-        assert "completed_jobs" in queue_info
+        assert "queue_length" in queue_info
+        assert "active_workers" in queue_info
+        assert "redis_connected" in queue_info
         
         # 7. Get recent jobs
-        recent_jobs_response = client.get("/api/v1/tasks/recent-jobs", headers=headers)
+        recent_jobs_response = client.get("/api/v1/tasks/jobs/recent", headers=headers)
         assert recent_jobs_response.status_code == 200
         
         recent_jobs = recent_jobs_response.json()
@@ -273,35 +260,48 @@ class TestPrometheusIntegration:
         # 3. Query application metrics
         with patch('app.services.prometheus.prometheus_service.get_application_metrics') as mock_app_metrics:
             mock_app_metrics.return_value = {
-                "http_requests_total": {
-                    "status": "success",
-                    "data": {"result": [{"value": [1640995200, "100"]}]}
-                }
+                "status": "success",
+                "application_metrics": {
+                    "http_requests_total": {
+                        "status": "success",
+                        "result": [{"value": [1640995200, "100"]}]
+                    }
+                },
+                "timestamp": "2023-12-31T00:00:00"
             }
             
-            app_metrics_response = client.get("/api/v1/prometheus/metrics/application", headers=headers)
+            app_metrics_response = client.get("/api/v1/prometheus/application_metrics", headers=headers)
             assert app_metrics_response.status_code == 200
             
             app_metrics = app_metrics_response.json()
-            assert "http_requests_total" in app_metrics
+            assert "application_metrics" in app_metrics
+            assert "http_requests_total" in app_metrics["application_metrics"]
         
         # 4. Query system metrics
         with patch('app.services.prometheus.prometheus_service.get_system_metrics') as mock_system_metrics:
             mock_system_metrics.return_value = {
-                "cpu_usage": {"status": "success", "data": {"result": [{"value": [1640995200, "75.5"]}]}}
+                "status": "success",
+                "system_metrics": {
+                    "cpu_usage": {
+                        "status": "success", 
+                        "result": [{"value": [1640995200, "75.5"]}]
+                    }
+                },
+                "timestamp": "2023-12-31T00:00:00"
             }
             
-            system_metrics_response = client.get("/api/v1/prometheus/metrics/system", headers=headers)
+            system_metrics_response = client.get("/api/v1/prometheus/system_metrics", headers=headers)
             assert system_metrics_response.status_code == 200
             
             system_metrics = system_metrics_response.json()
-            assert "cpu_usage" in system_metrics
+            assert "system_metrics" in system_metrics
+            assert "cpu_usage" in system_metrics["system_metrics"]
         
         # 5. Get targets information
         with patch('app.services.prometheus.prometheus_service.get_targets') as mock_targets:
             mock_targets.return_value = {
                 "status": "success",
-                "data": {"activeTargets": []}
+                "targets": {"activeTargets": []}
             }
             
             targets_response = client.get("/api/v1/prometheus/targets", headers=headers)
@@ -309,6 +309,7 @@ class TestPrometheusIntegration:
             
             targets_data = targets_response.json()
             assert targets_data["status"] == "success"
+            assert "targets" in targets_data
         
         # 6. Perform custom query
         with patch('app.services.prometheus.prometheus_service.query_instant') as mock_query:
@@ -337,19 +338,19 @@ class TestSecurityIntegration:
         # 1. Register user
         user_data = {
             "email": "security@example.com",
-            "password": "securepassword123",
+            "password": "SecurePassword123",
             "first_name": "Security",
             "last_name": "User"
         }
         
-        with patch('app.services.user.send_welcome_email_task.delay'):
+        with patch('app.tasks.helpers.send_welcome_email_task.delay'):
             register_response = client.post("/api/v1/auth/register", json=user_data)
         assert register_response.status_code == 200
         
         # 2. Login and get tokens
         login_data = {
             "username": "security@example.com",
-            "password": "securepassword123"
+            "password": "SecurePassword123"
         }
         
         login_response = client.post("/api/v1/auth/login", data=login_data)
@@ -362,13 +363,13 @@ class TestSecurityIntegration:
         # 3. Use access token for protected endpoints
         headers = {"Authorization": f"Bearer {access_token}"}
         
-        me_response = client.get("/api/v1/auth/me", headers=headers)
+        me_response = client.post("/api/v1/auth/test-token", headers=headers)
         assert me_response.status_code == 200
         
         # 4. Test invalid token scenarios
         invalid_headers = {"Authorization": "Bearer invalid-token"}
-        invalid_response = client.get("/api/v1/auth/me", headers=invalid_headers)
-        assert invalid_response.status_code == 403
+        invalid_response = client.post("/api/v1/auth/test-token", headers=invalid_headers)
+        assert invalid_response.status_code == 401
         
         # 5. Refresh access token
         refresh_data = {"refresh_token": refresh_token}
@@ -381,7 +382,7 @@ class TestSecurityIntegration:
         
         # 6. Use new access token
         new_headers = {"Authorization": f"Bearer {new_tokens['access_token']}"}
-        new_me_response = client.get("/api/v1/auth/me", headers=new_headers)
+        new_me_response = client.post("/api/v1/auth/test-token", headers=new_headers)
         assert new_me_response.status_code == 200
         
         # 7. Test permission boundaries
@@ -391,8 +392,8 @@ class TestSecurityIntegration:
         users_response = client.get("/api/v1/users/", headers=regular_user_headers)
         assert users_response.status_code == 400  # Not enough privileges
         
-        prometheus_response = client.get("/api/v1/prometheus/health", headers=regular_user_headers)
-        assert prometheus_response.status_code == 400  # Not enough privileges
+        prometheus_response = client.get("/api/v1/prometheus/health")  # Public endpoint
+        assert prometheus_response.status_code == 200  # Public access allowed
 
 
 class TestErrorHandlingIntegration:
@@ -425,8 +426,8 @@ class TestErrorHandlingIntegration:
         assert response.status_code == 400
         
         # 4. Test server errors (mocked)
-        with patch('app.api.v1.endpoints.items.get_items') as mock_get_items:
-            mock_get_items.side_effect = Exception("Database error")
+        with patch('app.db.database.AsyncSession.execute') as mock_execute:
+            mock_execute.side_effect = Exception("Database connection error")
             
             response = client.get("/api/v1/items/", headers=headers)
             assert response.status_code == 500

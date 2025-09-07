@@ -11,7 +11,6 @@ from app.db.crud import CRUDBase
 from app.models.item import Item
 from app.models.user import User
 from app.schemas.item import ItemCreate, ItemUpdate
-from app.tasks.helpers import process_item_task, send_item_notification_task
 
 
 class ItemService(BaseService[Item, ItemCreate, ItemUpdate]):
@@ -39,14 +38,19 @@ class ItemService(BaseService[Item, ItemCreate, ItemUpdate]):
         item = await self.crud.create(db, obj_in=item_data)
         
         # Process item asynchronously (e.g., data validation, enrichment)
-        await process_item_task.delay(item.id)
-        
-        # Send notification to owner
-        await send_item_notification_task.delay(
-            owner.email, 
-            f"Item '{item.title}' created successfully",
-            item.id
-        )
+        try:
+            from app.tasks.helpers import process_item_task, send_item_notification_task
+            await process_item_task.delay(item.id)
+            
+            # Send notification to owner
+            await send_item_notification_task.delay(
+                owner.email, 
+                f"Item '{item.title}' created successfully",
+                item.id
+            )
+        except ImportError:
+            # Task system not available, skip tasks
+            pass
         
         return item
     

@@ -11,7 +11,6 @@ from app.db.crud import CRUDBase
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash, verify_password
-from app.tasks.helpers import send_welcome_email_task
 
 
 class UserService(BaseService[User, UserCreate, UserUpdate]):
@@ -38,8 +37,13 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         # Create user
         user = await self.crud.create(db, obj_in=user_data)
         
-        # Send welcome email asynchronously
-        await send_welcome_email_task.delay(user.email, user.first_name or "User")
+        # Send welcome email asynchronously (lazy import to avoid circular imports)
+        try:
+            from app.tasks.helpers import send_welcome_email_task
+            await send_welcome_email_task.delay(user.email, user.first_name or "User")
+        except ImportError:
+            # Task system not available, skip email
+            pass
         
         return user
     

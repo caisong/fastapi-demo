@@ -26,8 +26,7 @@ class APITestHelper:
     def get_auth_headers(self, user: User) -> Dict[str, str]:
         """Get authentication headers for a user"""
         if user.email not in self._cached_tokens:
-            token_data = {"sub": str(user.id)}
-            access_token = create_access_token(token_data)
+            access_token = create_access_token(subject=str(user.id))
             self._cached_tokens[user.email] = access_token
         
         return {"Authorization": f"Bearer {self._cached_tokens[user.email]}"}
@@ -36,7 +35,7 @@ class APITestHelper:
         """Create a test user with default values"""
         defaults = {
             "email": "testuser@example.com",
-            "password": "testpassword123",
+            "password": "TestPassword123",
             "first_name": "Test",
             "last_name": "User"
         }

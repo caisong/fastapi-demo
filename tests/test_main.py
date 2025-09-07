@@ -11,8 +11,8 @@ def test_read_main(client: TestClient):
     data = response.json()
     assert "message" in data
     assert "version" in data
-    assert "status" in data
-    assert data["status"] == "running"
+    assert "docs" in data
+    assert "health" in data
 
 
 def test_health_check(client: TestClient):

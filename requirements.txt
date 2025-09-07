@@ -1,74 +1,99 @@
-# FastAPI Core
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-
-# Process Management
-honcho==1.0.1
-
-# Admin Interface
-sqladmin==0.21.0
-
-# Database
-sqlalchemy==2.0.23
-alembic==1.12.1
-# PostgreSQL drivers (choose one based on your environment)
-psycopg2-binary==2.9.9  # For PostgreSQL (Linux/Mac)
-# psycopg2==2.9.9  # Alternative for Windows if binary version fails
-asyncpg==0.29.0  # Async PostgreSQL driver
-aiosqlite==0.19.0  # Async SQLite driver
-# sqlite3 is included in Python standard library
-
-# Authentication & Security
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
-
-# Validation & Serialization
-pydantic==2.5.0
-pydantic-settings==2.1.0
-
-# HTTP Client
-httpx==0.27.0
-requests==2.31.0
-
-# Environment & Configuration
-python-dotenv==1.0.0
-
-# Development & Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
+aiohappyeyeballs==2.6.1
+aiohttp==3.12.15
+aiosignal==1.4.0
+aiosqlite==0.21.0
+annotated-types==0.7.0
+anyio==4.10.0
+arq==0.26.3
+asyncpg==0.30.0
+attrs==25.3.0
+certifi==2025.8.3
+cffi==1.17.1
+charset-normalizer==3.4.3
+click==8.2.1
+contourpy==1.3.3
+cryptography==45.0.7
+cycler==0.12.1
+dateparser==1.2.2
+dnspython==2.7.0
+ecdsa==0.19.1
+email-validator==2.3.0
+factory_boy==3.3.3
+Faker==37.6.0
+fastapi==0.116.1
+fastapi-cli==0.0.10
+fastapi-cloud-cli==0.1.5
+fonttools==4.59.2
+frozenlist==1.7.0
+greenlet==3.2.4
+h11==0.16.0
+hiredis==3.2.1
+httmock==1.4.0
+httpcore==1.0.9
+httptools==0.6.4
+httpx==0.28.1
+idna==3.10
+iniconfig==2.1.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+kiwisolver==1.4.9
+markdown-it-py==4.0.0
+MarkupSafe==3.0.2
+matplotlib==3.10.6
+mdurl==0.1.2
+multidict==6.6.4
+numpy==2.3.2
+packaging==25.0
+pandas==2.3.2
+passlib==1.7.4
+pillow==11.3.0
+pluggy==1.6.0
+prometheus-api-client==0.6.0
+prometheus-fastapi-instrumentator==7.1.0
+prometheus_client==0.22.1
+propcache==0.3.2
+py-cpuinfo==9.0.0
+pyasn1==0.6.1
+pycparser==2.22
+pydantic==2.11.7
+pydantic-settings==2.10.1
+pydantic_core==2.33.2
+Pygments==2.19.2
+PyJWT==2.10.1
+pyparsing==3.2.3
+pytest==8.4.2
+pytest-asyncio==1.1.0
+pytest-benchmark==5.1.0
 pytest-mock==3.12.0
-pytest-xdist==3.5.0  # Parallel test execution
-pytest-html==4.1.1  # HTML test reports
-pytest-benchmark==4.0.0  # Performance testing
-httpx==0.27.0
-factory-boy==3.3.0
-responses==0.24.1
-faker==20.1.0  # Generate fake test data
-freezegun==1.2.2  # Mock datetime in tests
-test-containers==3.7.1  # Integration testing with containers
-black==23.11.0
-isort==5.12.0
-flake8==6.1.0
-mypy==1.7.1
-
-# Optional: Background Tasks
-arq==0.25.0
-redis==5.0.1
-
-# Process Management
-honcho==1.1.0
-
-# Optional: Caching
-fastapi-cache2==0.2.1
-
-# Optional: Documentation
-mkdocs==1.5.3
-mkdocs-material==9.5.0
-
-# Monitoring
-prometheus-client==0.19.0
-prometheus-fastapi-instrumentator==6.1.0
-prometheus-api-client==0.5.2
-pysqlite3==2.1.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.1.1
+python-jose==3.3.0
+python-multipart==0.0.20
+pytz==2025.2
+PyYAML==6.0.2
+redis==5.3.1
+regex==2025.9.1
+requests==2.32.5
+rich==14.1.0
+rich-toolkit==0.15.1
+rignore==0.6.4
+rsa==4.9.1
+sentry-sdk==2.37.0
+shellingham==1.5.4
+six==1.17.0
+sniffio==1.3.1
+sqladmin==0.21.0
+SQLAlchemy==2.0.43
+starlette==0.47.3
+typer==0.17.4
+typing-inspection==0.4.1
+typing_extensions==4.15.0
+tzdata==2025.2
+tzlocal==5.3.1
+urllib3==2.5.0
+uvicorn==0.35.0
+uvloop==0.21.0
+watchfiles==1.1.0
+websockets==15.0.1
+WTForms==3.1.2
+yarl==1.20.1

@@ -17,6 +17,10 @@ from app.tasks.helpers import (
 )
 
 
+import pytest
+
+
+@pytest.mark.asyncio
 async def test_tasks():
     """Test various tasks"""
     print("🚀 Testing ARQ Task Queue")

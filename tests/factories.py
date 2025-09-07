@@ -32,7 +32,7 @@ class UserFactory(BaseFactory):
     email = Sequence(lambda n: f'user{n}@example.com')
     first_name = Faker('first_name')
     last_name = Faker('last_name')
-    hashed_password = LazyAttribute(lambda obj: get_password_hash('testpassword123'))
+    hashed_password = LazyAttribute(lambda obj: get_password_hash('TestPassword123'))
     is_active = True
     is_superuser = False
     created_at = LazyAttribute(lambda obj: fake.date_time_between(start_date='-30d', end_date='now'))
@@ -84,7 +84,15 @@ class PrivateItemFactory(ItemFactory):
 
 def create_user(db: Session, **kwargs) -> User:
     """Create a user in the database"""
+    # Handle custom password
+    password = kwargs.pop('password', None)
+    
     user_data = UserFactory.build(**kwargs)
+    
+    # If a custom password was provided, hash it
+    if password:
+        user_data.hashed_password = get_password_hash(password)
+    
     user = User(
         email=user_data.email,
         first_name=user_data.first_name,
@@ -101,7 +109,15 @@ def create_user(db: Session, **kwargs) -> User:
 
 def create_superuser(db: Session, **kwargs) -> User:
     """Create a superuser in the database"""
+    # Handle custom password
+    password = kwargs.pop('password', None)
+    
     user_data = SuperUserFactory.build(**kwargs)
+    
+    # If a custom password was provided, hash it
+    if password:
+        user_data.hashed_password = get_password_hash(password)
+    
     user = User(
         email=user_data.email,
         first_name=user_data.first_name,
@@ -130,19 +146,22 @@ def create_item(db: Session, owner_id: int, **kwargs) -> Item:
     return item
 
 
-def get_user_token_headers(client, email: str = "test@example.com", password: str = "testpassword123") -> dict:
+def get_user_token_headers(client, email: str = "test@example.com", password: str = "TestPassword123") -> dict:
     """Get authentication headers for a user"""
     login_data = {
         "username": email,
         "password": password
     }
     response = client.post("/api/v1/auth/login", data=login_data)
+    if response.status_code != 200:
+        print(f"Login failed: {response.status_code}, {response.text}")
+        raise ValueError(f"Failed to login: {response.status_code}")
     tokens = response.json()
     access_token = tokens["access_token"]
     return {"Authorization": f"Bearer {access_token}"}
 
 
-def get_superuser_token_headers(client, email: str = "admin@example.com", password: str = "testpassword123") -> dict:
+def get_superuser_token_headers(client, email: str = "admin@example.com", password: str = "TestPassword123") -> dict:
     """Get authentication headers for a superuser"""
     return get_user_token_headers(client, email, password)
 
@@ -153,6 +172,8 @@ def create_multiple_users(db: Session, count: int = 5, **kwargs) -> list[User]:
     users = []
     for i in range(count):
         user_kwargs = {**kwargs, 'email': f'user{i}@example.com'}
+        # Remove password if present since User model doesn't have password field
+        user_kwargs.pop('password', None)
         user = create_user(db, **user_kwargs)
         users.append(user)
     return users
@@ -213,7 +234,7 @@ class TestDataGenerator:
             'email': fake.email(),
             'first_name': fake.first_name(),
             'last_name': fake.last_name(),
-            'password': 'testpassword123'
+            'password': 'TestPassword123'
         }
         
         if user_type == 'superuser':
@@ -255,12 +276,12 @@ class TestDataGenerator:
         if scenario == 'valid':
             return {
                 'username': 'test@example.com',
-                'password': 'testpassword123'
+                'password': 'TestPassword123'
             }
         elif scenario == 'invalid_email':
             return {
                 'username': 'nonexistent@example.com',
-                'password': 'testpassword123'
+                'password': 'TestPassword123'
             }
         elif scenario == 'invalid_password':
             return {

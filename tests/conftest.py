@@ -8,11 +8,20 @@ from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # Set test environment before importing anything
+# Set test environment before importing anything
 os.environ["ENVIRONMENT"] = "testing"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
+os.environ["TEST_DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
 os.environ["ENABLE_METRICS"] = "false"
 os.environ["ENABLE_SECURITY_HEADERS"] = "false"
+os.environ["ENABLE_RATE_LIMIT"] = "false"
+os.environ["RATE_LIMIT_PER_MINUTE"] = "100000"
+os.environ["RATE_LIMIT_REQUESTS"] = "100000"
+os.environ["RATE_LIMIT_WINDOW"] = "3600"
+os.environ["ENABLE_CORS"] = "false"
 os.environ["ASYNC_DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
+os.environ["POSTGRES_SERVER"] = "sqlite"
+os.environ["POSTGRES_DB"] = "test.db"
 
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -126,14 +135,22 @@ async def async_db() -> AsyncGenerator[AsyncSession, None]:
 def mock_task_queue(mocker):
     """Mock task queue for testing"""
     mock_queue = AsyncMock()
-    mock_queue.enqueue_task.return_value = "mock-job-id"
-    mock_queue.get_job_status.return_value = {
-        "status": "completed",
-        "job_id": "mock-job-id",
-        "result": "mock-result"
-    }
-    mocker.patch.object(task_queue, "enqueue_task", side_effect=mock_queue.enqueue_task)
-    mocker.patch.object(task_queue, "get_job_status", side_effect=mock_queue.get_job_status)
+    
+    def mock_enqueue_task(function_name, *args, **kwargs):
+        return f"mock-job-{function_name}"
+    
+    def mock_get_job_status(job_id):
+        return {
+            "status": "completed",
+            "job_id": job_id,  # Use the actual job_id passed in
+            "result": "mock-result"
+        }
+    
+    mock_queue.enqueue_task.side_effect = mock_enqueue_task
+    mock_queue.get_job_status.side_effect = mock_get_job_status
+    
+    mocker.patch.object(task_queue, "enqueue_task", side_effect=mock_enqueue_task)
+    mocker.patch.object(task_queue, "get_job_status", side_effect=mock_get_job_status)
     return mock_queue
 
 

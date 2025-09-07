@@ -89,7 +89,7 @@ class TestUserCreationEndpoint:
         
         user_data = {
             "email": "newuser@example.com",
-            "password": "newpassword123",
+            "password": "NewPassword123",
             "first_name": "New",
             "last_name": "User",
             "is_active": True,
@@ -116,7 +116,7 @@ class TestUserCreationEndpoint:
         
         user_data = {
             "email": "existing@example.com",  # Duplicate email
-            "password": "newpassword123",
+            "password": "NewPassword123",
             "first_name": "New",
             "last_name": "User"
         }
@@ -133,7 +133,7 @@ class TestUserCreationEndpoint:
         
         user_data = {
             "email": "newuser@example.com",
-            "password": "newpassword123",
+            "password": "NewPassword123",
             "first_name": "New",
             "last_name": "User"
         }
@@ -239,7 +239,7 @@ class TestUserUpdateEndpoint:
         target_user = create_user(db, email="user@example.com")
         
         update_data = {
-            "password": "newpassword123"
+            "password": "NewPassword123"
         }
         
         headers = get_superuser_token_headers(client)
@@ -294,7 +294,7 @@ class TestUserPermissions:
         # Can create users  
         user_data = {
             "email": "newuser@example.com",
-            "password": "newpassword123",
+            "password": "NewPassword123",
             "first_name": "New",
             "last_name": "User"
         }
@@ -310,7 +310,7 @@ class TestUserPermissions:
         response = client.put(f"/api/v1/users/{regular_user.id}", json=update_data, headers=headers)
         assert response.status_code == 200
     
-    @patch('app.core.security.get_password_hash')
+    @patch('app.api.v1.endpoints.users.get_password_hash')
     def test_password_hashing_called_on_create(self, mock_hash, client: TestClient, db: Session):
         """Test that password is properly hashed when creating user"""
         create_superuser(db, email="admin@example.com")
@@ -318,7 +318,7 @@ class TestUserPermissions:
         
         user_data = {
             "email": "newuser@example.com",
-            "password": "plaintext_password",
+            "password": "PlainTextPassword123",
             "first_name": "New",
             "last_name": "User"
         }
@@ -327,4 +327,4 @@ class TestUserPermissions:
         response = client.post("/api/v1/users/", json=user_data, headers=headers)
         
         assert response.status_code == 200
-        mock_hash.assert_called_once_with("plaintext_password")
+        mock_hash.assert_called_once_with("PlainTextPassword123")

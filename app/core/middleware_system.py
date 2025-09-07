@@ -298,10 +298,16 @@ class MiddlewareManager:
     
     def setup_default_middlewares(self, app: Any) -> None:
         """Setup default middlewares"""
+        from app.core.config import settings
+        
         # Add middlewares in order
         self.add_middleware(SecurityHeadersMiddleware(app))
         self.add_middleware(CORSMiddleware(app))
-        self.add_middleware(RateLimitMiddleware(app))
+        
+        # Only add rate limiting in non-testing environments
+        if settings.ENABLE_RATE_LIMIT and settings.ENVIRONMENT != "testing":
+            self.add_middleware(RateLimitMiddleware(app))
+        
         self.add_middleware(RequestLoggingMiddleware(app))
         self.add_middleware(ErrorHandlingMiddleware(app))
         

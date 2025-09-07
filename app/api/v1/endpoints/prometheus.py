@@ -18,7 +18,7 @@ from app.schemas.prometheus import (
     ApplicationMetricsResponse,
     SystemMetricsResponse
 )
-from app.api.deps import get_current_active_user
+from app.api.deps import get_current_active_superuser
 from app.models.user import User
 
 router = APIRouter()
@@ -34,7 +34,7 @@ async def prometheus_health():
 @router.post("/query", response_model=PrometheusQueryResponse)
 async def prometheus_query(
     request: PrometheusQueryRequest,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Execute an instant query against Prometheus"""
     result = await prometheus_service.query_instant(request.query)
@@ -44,7 +44,7 @@ async def prometheus_query(
 @router.get("/query", response_model=PrometheusQueryResponse)
 async def prometheus_query_get(
     query: str = Query(..., description="PromQL query string"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Execute an instant query against Prometheus (GET method)"""
     result = await prometheus_service.query_instant(query)
@@ -54,7 +54,7 @@ async def prometheus_query_get(
 @router.post("/query_range", response_model=PrometheusRangeQueryResponse)
 async def prometheus_query_range(
     request: PrometheusRangeQueryRequest,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Execute a range query against Prometheus"""
     result = await prometheus_service.query_range(
@@ -72,7 +72,7 @@ async def prometheus_query_range_get(
     start: datetime = Query(..., description="Start timestamp"),
     end: datetime = Query(..., description="End timestamp"),
     step: str = Query("15s", description="Query resolution step width"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Execute a range query against Prometheus (GET method)"""
     result = await prometheus_service.query_range(
@@ -86,7 +86,7 @@ async def prometheus_query_range_get(
 
 @router.get("/metrics", response_model=PrometheusMetricsListResponse)
 async def get_prometheus_metrics(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Get list of available metrics from Prometheus"""
     result = await prometheus_service.get_metrics_list()
@@ -95,7 +95,7 @@ async def get_prometheus_metrics(
 
 @router.get("/targets", response_model=PrometheusTargetsResponse)
 async def get_prometheus_targets(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Get Prometheus targets information"""
     result = await prometheus_service.get_targets()
@@ -104,7 +104,7 @@ async def get_prometheus_targets(
 
 @router.get("/application_metrics", response_model=ApplicationMetricsResponse)
 async def get_application_metrics(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Get common application metrics"""
     result = await prometheus_service.get_application_metrics()
@@ -113,7 +113,7 @@ async def get_application_metrics(
 
 @router.get("/system_metrics", response_model=SystemMetricsResponse)
 async def get_system_metrics(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Get system-level metrics"""
     result = await prometheus_service.get_system_metrics()
@@ -123,7 +123,7 @@ async def get_system_metrics(
 # Convenience endpoints for common queries
 @router.get("/quick/cpu_usage")
 async def get_cpu_usage(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Get current CPU usage"""
     result = await prometheus_service.query_instant("rate(process_cpu_seconds_total[5m])")
@@ -132,7 +132,7 @@ async def get_cpu_usage(
 
 @router.get("/quick/memory_usage")
 async def get_memory_usage(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Get current memory usage"""
     result = await prometheus_service.query_instant("process_resident_memory_bytes")
@@ -141,7 +141,7 @@ async def get_memory_usage(
 
 @router.get("/quick/http_requests_rate")
 async def get_http_requests_rate(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Get HTTP requests rate (last 5 minutes)"""
     result = await prometheus_service.query_instant("sum(rate(http_requests_total[5m]))")
@@ -150,7 +150,7 @@ async def get_http_requests_rate(
 
 @router.get("/quick/uptime")
 async def get_application_uptime(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_superuser)
 ):
     """Get application uptime"""
     result = await prometheus_service.query_instant("time() - process_start_time_seconds")
