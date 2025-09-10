@@ -8,6 +8,7 @@ anyio==4.10.0
 arq==0.26.3
 asyncpg==0.30.0
 attrs==25.3.0
+bcrypt==4.0.1  # Pin to 4.0.1 for passlib compatibility
 certifi==2025.8.3
 charset-normalizer==3.4.3
 click==8.2.1
@@ -46,7 +47,7 @@ multidict==6.6.4
 numpy==2.3.2
 packaging==25.0
 pandas==2.3.2
-passlib==1.7.4
+passlib[bcrypt]==1.7.4
 pillow==11.3.0
 pluggy==1.6.0
 prometheus-api-client==0.6.0
