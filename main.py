@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.middleware.authentication import AuthenticationMiddleware
 
 from app.core.config import settings
 from app.core.application import create_app, run_app
@@ -20,7 +21,9 @@ app = create_app()
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
-    max_age=3600  # 1 hour
+    max_age=3600,  # 1 hour
+    same_site="lax",  # Allow cross-site requests but protect against CSRF
+    https_only=settings.ENVIRONMENT == "production",  # Secure cookies in production
 )
 
 # Set up CORS

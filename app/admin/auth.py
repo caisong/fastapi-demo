@@ -17,7 +17,7 @@ class AdminAuthBackend(AuthenticationBackend):
     """Custom authentication backend for admin interface"""
     
     def __init__(self):
-        super().__init__(secret_key=settings.ADMIN_SECRET_KEY)
+        super().__init__(secret_key=settings.SECRET_KEY)
         # Create sync engine for authentication
         sync_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
         self.engine = create_engine(sync_url)
@@ -40,7 +40,7 @@ class AdminAuthBackend(AuthenticationBackend):
             try:
                 user = db.execute(select(User).filter(User.email == username)).scalar_one_or_none()
                 
-                if user and user.is_active and user.is_superuser:
+                if user and bool(user.is_active) and bool(user.is_superuser):
                     if verify_password(password, user.hashed_password):
                         # Store user info in session
                         request.session.update({
@@ -53,7 +53,7 @@ class AdminAuthBackend(AuthenticationBackend):
                     else:
                         print("Password verification failed")
                 else:
-                    print(f"User validation failed: user={bool(user)}, active={user.is_active if user else False}, superuser={user.is_superuser if user else False}")
+                    print(f"User validation failed: user={bool(user)}, active={bool(user.is_active) if user else False}, superuser={bool(user.is_superuser) if user else False}")
                         
             except Exception as e:
                 print(f"Authentication error: {e}")
@@ -67,11 +67,11 @@ class AdminAuthBackend(AuthenticationBackend):
         request.session.clear()
         return True
     
-    async def authenticate(self, request: Request) -> Optional[RedirectResponse]:
+    async def authenticate(self, request: Request):
         """Check if user is authenticated for protected routes"""
         # Skip authentication for login page and static assets
         if request.url.path.endswith("/login") or "/static/" in request.url.path:
-            return None
+            return True
             
         token = request.session.get("token")
         print(f"Authenticate check: path={request.url.path}, token={token}, session_keys={list(request.session.keys())}")
@@ -86,7 +86,7 @@ class AdminAuthBackend(AuthenticationBackend):
             with self.SessionLocal() as db:
                 try:
                     user = db.execute(select(User).filter(User.id == user_id)).scalar_one_or_none()
-                    if not user or not user.is_active or not user.is_superuser:
+                    if not user or not bool(user.is_active) or not bool(user.is_superuser):
                         print(f"User validation failed during auth check, clearing session")
                         request.session.clear()
                         return RedirectResponse(request.url_for("admin:login"), status_code=302)
@@ -98,4 +98,4 @@ class AdminAuthBackend(AuthenticationBackend):
                     return RedirectResponse(request.url_for("admin:login"), status_code=302)
         
         print(f"Authentication successful for path: {request.url.path}")
-        return None
+        return True
