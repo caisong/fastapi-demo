@@ -2,7 +2,7 @@
 # Usage: honcho start -f Procfile.dev
 
 # Main FastAPI application server
-web: python scripts/dev.py
+web: PYTHONPATH=/data/code/webdev3:$PYTHONPATH fastapi dev main.py --host 0.0.0.0 --port 8000
 
 # ARQ worker for async task processing
 worker: python scripts/start_worker.py

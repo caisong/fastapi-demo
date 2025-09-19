@@ -25,6 +25,7 @@ help:
 	@echo "  setup-test-db        - Setup test database"
 	@echo ""
 	@echo "Service Management:"
+	@echo "  dev                  - Start FastAPI development server directly"
 	@echo "  start                - Start all services (production)"
 	@echo "  start-dev            - Start all services with Redis (development)"
 	@echo "  start-monitoring     - Start all services with monitoring"
@@ -173,6 +174,11 @@ test-full: setup-reports
 
 # Service Management Commands
 # ==========================
+
+# Start development server directly with FastAPI CLI
+dev:
+	@echo "Starting FastAPI development server..."
+	PYTHONPATH=/data/code/webdev3:$$PYTHONPATH fastapi dev main.py --host 0.0.0.0 --port 8000
 
 # Start all services (production)
 start:

@@ -53,9 +53,9 @@ class ApplicationManager:
             description=app_description,
             version=app_version,
             debug=app_debug,
-            docs_url=settings.API_DOCS_URL if not app_debug else None,
-            redoc_url=settings.API_REDOC_URL if not app_debug else None,
-            openapi_url="/openapi.json" if not app_debug else None,
+            docs_url=settings.API_DOCS_URL,
+            redoc_url=settings.API_REDOC_URL,
+            openapi_url="/openapi.json",
             **kwargs
         )
         
