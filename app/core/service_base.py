@@ -212,61 +212,92 @@ class ExternalAPIService(LoggerMixin, Injectable):
     
     def __init__(self, base_url: str, timeout: int = 30):
         super().__init__()
-        self.base_url = base_url
+        self.base_url = base_url.rstrip('/')  # 移除末尾的斜杠
         self.timeout = timeout
     
-    async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def _make_request(
+        self, 
+        method: str, 
+        endpoint: str, 
+        params: Optional[Dict[str, Any]] = None,
+        data: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """Make HTTP request"""
+        import aiohttp
+        import time
+        
+        # 构建完整URL
+        url = f"{self.base_url}{endpoint}" if not endpoint.startswith('http') else endpoint
+        
+        # 合并默认头和自定义头
+        default_headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "FastAPI-External-Client/1.0"
+        }
+        if headers:
+            default_headers.update(headers)
+        
+        start_time = time.time()
+        
+        try:
+            timeout = aiohttp.ClientTimeout(total=self.timeout)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                # 根据方法选择适当的请求
+                if method.upper() == "GET":
+                    async with session.get(url, params=params, headers=default_headers) as response:
+                        response.raise_for_status()
+                        result = await response.json()
+                elif method.upper() == "POST":
+                    async with session.post(url, params=params, json=data, headers=default_headers) as response:
+                        response.raise_for_status()
+                        result = await response.json()
+                elif method.upper() == "PUT":
+                    async with session.put(url, params=params, json=data, headers=default_headers) as response:
+                        response.raise_for_status()
+                        result = await response.json()
+                elif method.upper() == "DELETE":
+                    async with session.delete(url, params=params, headers=default_headers) as response:
+                        response.raise_for_status()
+                        result = await response.json()
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {method}")
+                
+                response_time = (time.time() - start_time) * 1000  # 转换为毫秒
+                self.logger.info(f"{method} {url} - {response.status} - {response_time:.2f}ms")
+                
+                return {
+                    "status_code": response.status,
+                    "data": result,
+                    "response_time": response_time,
+                    "headers": dict(response.headers)
+                }
+                
+        except aiohttp.ClientResponseError as e:
+            response_time = (time.time() - start_time) * 1000
+            self.logger.error(f"{method} {url} - {e.status} - {response_time:.2f}ms - {str(e)}")
+            raise Exception(f"HTTP {e.status}: {e.message}")
+        except aiohttp.ClientError as e:
+            response_time = (time.time() - start_time) * 1000
+            self.logger.error(f"{method} {url} - ERROR - {response_time:.2f}ms - {str(e)}")
+            raise Exception(f"Client error: {str(e)}")
+        except Exception as e:
+            response_time = (time.time() - start_time) * 1000
+            self.logger.error(f"{method} {url} - ERROR - {response_time:.2f}ms - {str(e)}")
+            raise
+    
+    async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """Make GET request"""
-        import aiohttp
-        url = f"{self.base_url}{endpoint}"
-        
-        try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-                async with session.get(url, params=params) as response:
-                    response.raise_for_status()
-                    return await response.json()
-        except Exception as e:
-            self.logger.error(f"Error making GET request to {url}: {str(e)}")
-            raise
+        return await self._make_request("GET", endpoint, params=params, headers=headers)
     
-    async def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """Make POST request"""
-        import aiohttp
-        url = f"{self.base_url}{endpoint}"
-        
-        try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-                async with session.post(url, json=data) as response:
-                    response.raise_for_status()
-                    return await response.json()
-        except Exception as e:
-            self.logger.error(f"Error making POST request to {url}: {str(e)}")
-            raise
+        return await self._make_request("POST", endpoint, data=data, headers=headers)
     
-    async def put(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def put(self, endpoint: str, data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """Make PUT request"""
-        import aiohttp
-        url = f"{self.base_url}{endpoint}"
-        
-        try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-                async with session.put(url, json=data) as response:
-                    response.raise_for_status()
-                    return await response.json()
-        except Exception as e:
-            self.logger.error(f"Error making PUT request to {url}: {str(e)}")
-            raise
+        return await self._make_request("PUT", endpoint, data=data, headers=headers)
     
-    async def delete(self, endpoint: str) -> Dict[str, Any]:
+    async def delete(self, endpoint: str, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """Make DELETE request"""
-        import aiohttp
-        url = f"{self.base_url}{endpoint}"
-        
-        try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-                async with session.delete(url) as response:
-                    response.raise_for_status()
-                    return await response.json()
-        except Exception as e:
-            self.logger.error(f"Error making DELETE request to {url}: {str(e)}")
-            raise
+        return await self._make_request("DELETE", endpoint, headers=headers)
