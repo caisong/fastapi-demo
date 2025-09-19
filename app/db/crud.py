@@ -80,18 +80,13 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return obj
 
 
-async def init_db(db: AsyncSession) -> None:
+async def init_default_data(db: AsyncSession) -> None:
     """
-    Initialize database with initial data
+    Initialize database with default data (users, settings, etc.)
+    Note: Database schema should be managed by Alembic migrations
     """
-    # Import all models here to ensure they are registered with SQLAlchemy
+    # Import models to ensure they are registered
     from app.models import user  # noqa
-    
-    # Create tables (this should be done via Alembic in production)
-    # For async engines, we need to use create_all differently
-    from app.db.database import engine
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     
     # Create initial superuser if it doesn't exist
     from app.core.config import settings
@@ -99,8 +94,8 @@ async def init_db(db: AsyncSession) -> None:
     from app.core.security import get_password_hash
     
     result = await db.execute(select(User).filter(User.email == settings.FIRST_SUPERUSER_EMAIL))
-    user = result.scalar_one_or_none()
-    if not user:
+    existing_user = result.scalar_one_or_none()
+    if not existing_user:
         user = User(
             email=settings.FIRST_SUPERUSER_EMAIL,
             hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
@@ -110,3 +105,40 @@ async def init_db(db: AsyncSession) -> None:
         db.add(user)
         await db.commit()
         await db.refresh(user)
+        print(f"Created initial superuser: {settings.FIRST_SUPERUSER_EMAIL}")
+    else:
+        print(f"Superuser already exists: {settings.FIRST_SUPERUSER_EMAIL}")
+
+
+# Legacy function - DEPRECATED
+# Use init_default_data() instead
+# This function will be removed in a future version
+async def init_db(db: AsyncSession) -> None:
+    """
+    DEPRECATED: Legacy database initialization function
+    
+    This function uses create_all() which conflicts with Alembic migrations.
+    Use init_default_data() instead for initializing default data.
+    
+    For database schema management, use Alembic migrations:
+    - alembic revision --autogenerate -m "description"
+    - alembic upgrade head
+    """
+    import warnings
+    warnings.warn(
+        "init_db() is deprecated. Use Alembic migrations for schema and init_default_data() for default data.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    
+    # Import all models here to ensure they are registered with SQLAlchemy
+    from app.models import user  # noqa
+    
+    # Create tables (this should be done via Alembic in production)
+    # For async engines, we need to use create_all differently
+    from app.db.database import engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    # Delegate to the new function for data initialization
+    await init_default_data(db)

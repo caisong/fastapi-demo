@@ -24,11 +24,22 @@ help:
 	@echo "  clean                - Clean test artifacts"
 	@echo "  setup-test-db        - Setup test database"
 	@echo ""
+	@echo "Database Management (Alembic):"
+	@echo "  db-init              - 🗃️  Initialize database with migrations and default data"
+	@echo "  db-migrate           - 📝 Create new database migration"
+	@echo "  db-upgrade           - ⬆️  Apply pending migrations"
+	@echo "  db-downgrade         - ⬇️  Rollback database migration"
+	@echo "  db-history           - 📋 Show migration history"
+	@echo "  db-current           - 📍 Show current database revision"
+	@echo "  db-reset             - ⚠️  Reset database (DANGEROUS)"
+	@echo ""
 	@echo "Service Management:"
-	@echo "  dev                  - Start FastAPI development server directly"
+	@echo "  dev                  - 🚀 Start FastAPI development server (recommended for API development)"
+	@echo "  dev-quick            - ⚡ Quick FastAPI server start (minimal output)"
 	@echo "  start                - Start all services (production)"
-	@echo "  start-dev            - Start all services with Redis (development)"
+	@echo "  start-dev            - 🚀 Start all services with Redis (recommended for full stack development)"
 	@echo "  start-monitoring     - Start all services with monitoring"
+	@echo "  setup-dev            - 🔧 Setup complete development environment"
 	@echo "  stop                 - Stop all services"
 	@echo "  status               - Show service status"
 	@echo "  logs                 - Show service logs"
@@ -36,6 +47,7 @@ help:
 	@echo "  logs-worker          - Show worker service logs"
 	@echo "  logs-prometheus      - Show Prometheus service logs"
 	@echo "  logs-pushgateway     - Show Pushgateway service logs"
+	@echo "  health-check         - Check service health status"
 	@echo ""
 	@echo "Individual Services:"
 	@echo "  start-web            - Start only web service"
@@ -80,8 +92,7 @@ test-specific:
 
 # Development setup
 install-dev:
-	pip install -r requirements.txt
-	pip install -e .
+	. venv/bin/activate && pip install -r requirements.txt
 
 # Code quality
 lint:
@@ -99,6 +110,47 @@ check-all: lint type-check test
 # Database setup
 setup-test-db:
 	python -c "from app.db.database import Base, engine; Base.metadata.create_all(bind=engine)"
+
+# Database migration commands (Alembic)
+db-init:
+	@echo "🗃️  Initializing database with Alembic..."
+	@echo "1. Applying database migrations..."
+	. venv/bin/activate && alembic upgrade head
+	@echo "2. Initializing default data..."
+	. venv/bin/activate && PYTHONPATH=. python scripts/init_default_data.py
+	@echo "✅ Database initialization complete!"
+
+db-migrate:
+	@echo "📝 Creating new database migration..."
+	@read -p "Enter migration message: " msg; \
+	. venv/bin/activate && alembic revision --autogenerate -m "$$msg"
+
+db-upgrade:
+	@echo "⬆️  Applying database migrations..."
+	. venv/bin/activate && alembic upgrade head
+
+db-downgrade:
+	@echo "⬇️  Rolling back database migration..."
+	@read -p "Enter target revision (or 'base' for complete rollback): " rev; \
+	. venv/bin/activate && alembic downgrade "$$rev"
+
+db-history:
+	@echo "📋 Database migration history:"
+	. venv/bin/activate && alembic history --verbose
+
+db-current:
+	@echo "📍 Current database revision:"
+	. venv/bin/activate && alembic current
+
+db-reset:
+	@echo "⚠️  WARNING: This will reset the entire database!"
+	@read -p "Are you sure? Type 'yes' to continue: " confirm; \
+	if [ "$$confirm" = "yes" ]; then \
+		. venv/bin/activate && alembic downgrade base && alembic upgrade head; \
+		echo "✅ Database reset complete"; \
+	else \
+		echo "❌ Database reset cancelled"; \
+	fi
 
 # Cleanup
 clean:
@@ -177,23 +229,59 @@ test-full: setup-reports
 
 # Start development server directly with FastAPI CLI
 dev:
-	@echo "Starting FastAPI development server..."
-	PYTHONPATH=/data/code/webdev3:$$PYTHONPATH fastapi dev main.py --host 0.0.0.0 --port 8000
+	@echo "🚀 Starting FastAPI development server..."
+	@echo "======================================="
+	@echo "🌐 Server: http://localhost:8000"
+	@echo "📝 API docs: http://localhost:8000/docs"
+	@echo "🔍 Interactive API: http://localhost:8000/redoc"
+	@echo "🔴 Admin interface: http://localhost:8000/admin"
+	@echo "======================================="
+	. venv/bin/activate && fastapi dev main.py --host 0.0.0.0 --port 8000
+
+# Quick development server (simplified)
+dev-quick:
+	@echo "⚡ Quick FastAPI server start..."
+	. venv/bin/activate && fastapi dev main.py
 
 # Start all services (production)
 start:
 	@echo "Starting all services..."
-	honcho start
+	. venv/bin/activate && honcho start
 
 # Start all services with Redis (development)
 start-dev:
-	@echo "Starting all services with Redis (development mode)..."
-	honcho start -f Procfile.dev
+	@echo "🚀 Starting FastAPI Development Environment with Honcho"
+	@echo "=========================================================="
+	@echo "Checking dependencies..."
+	@if ! . venv/bin/activate && command -v honcho >/dev/null 2>&1; then \
+		echo "❌ Honcho is not installed. Installing..."; \
+		. venv/bin/activate && pip install honcho && echo "✅ Honcho installed successfully" || (echo "❌ Failed to install honcho. Please install manually: pip install honcho" && exit 1); \
+	fi
+	@echo "Checking Redis connection..."
+	@if redis-cli ping >/dev/null 2>&1; then \
+		echo "✅ Redis server is running"; \
+		echo "\n🔧 Starting development processes..."; \
+		echo "   - FastAPI server (web)"; \
+		echo "   - ARQ worker (worker)"; \
+		echo "   - Connected to Redis for async tasks"; \
+		echo "\n📝 Logs from all processes:"; \
+		echo "----------------------------------------"; \
+		. venv/bin/activate && honcho start -f Procfile.dev; \
+	else \
+		echo "⚠️  Redis server not running - tasks will execute synchronously"; \
+		echo "\n🔧 Starting development processes..."; \
+		echo "   - FastAPI server (web)"; \
+		echo "   - ARQ worker (worker)"; \
+		echo "   - Running in sync mode (no Redis)"; \
+		echo "\n📝 Logs from all processes:"; \
+		echo "----------------------------------------"; \
+		. venv/bin/activate && honcho start; \
+	fi
 
 # Start all services with monitoring
 start-monitoring:
 	@echo "Starting all services with monitoring..."
-	honcho start -f Procfile.monitoring
+	. venv/bin/activate && honcho start -f Procfile.monitoring
 
 # Stop all services
 stop:
@@ -268,19 +356,19 @@ logs-pushgateway:
 # Individual service commands
 start-web:
 	@echo "Starting web service only..."
-	honcho start web
+	. venv/bin/activate && honcho start web
 
 start-worker:
 	@echo "Starting worker service only..."
-	honcho start worker
+	. venv/bin/activate && honcho start worker
 
 start-prometheus:
 	@echo "Starting Prometheus service only..."
-	honcho start prometheus
+	. venv/bin/activate && honcho start prometheus
 
 start-pushgateway:
 	@echo "Starting Pushgateway service only..."
-	honcho start pushgateway
+	. venv/bin/activate && honcho start pushgateway
 
 # Service health checks
 health-check:
@@ -298,17 +386,32 @@ health-check:
 # Install honcho if not present
 install-honcho:
 	@echo "Installing honcho..."
-	@pip install honcho
+	@if ! command -v honcho >/dev/null 2>&1; then \
+		. venv/bin/activate && pip install honcho && echo "✅ Honcho installed successfully"; \
+	else \
+		echo "✅ Honcho is already installed"; \
+	fi
 
 # Setup development environment
 setup-dev: install-honcho install-dev
-	@echo "Development environment setup complete!"
-	@echo "Run 'make start-dev' to start all services with Redis"
+	@echo "🔧 Development environment setup complete!"
+	@echo "📋 Available commands:"
+	@echo "   make start-dev    - Start all services with Redis"
+	@echo "   make dev          - Start FastAPI server only"
+	@echo "   make test         - Run all tests"
+	@echo "   make health-check - Check service health"
 
 # Quick start for development
-dev: setup-dev start-dev
-	@echo "Development environment started!"
-	@echo "Web service: http://localhost:8000"
-	@echo "API docs: http://localhost:8000/docs"
-	@echo "Prometheus metrics: http://localhost:9090/metrics"
-	@echo "Pushgateway: http://localhost:9091/health"
+quick-start: setup-dev start-dev
+
+# Show service information after starting
+show-services:
+	@echo "🎆 Development environment started!"
+	@echo "=========================================="
+	@echo "🌐 Web service: http://localhost:8000"
+	@echo "📝 API docs: http://localhost:8000/docs"
+	@echo "🔍 Interactive API: http://localhost:8000/redoc"
+	@echo "📊 Prometheus metrics: http://localhost:9090/metrics"
+	@echo "📁 Pushgateway: http://localhost:9091/health"
+	@echo "🔴 Admin interface: http://localhost:8000/admin"
+	@echo "\nUse Ctrl+C to stop all services"
